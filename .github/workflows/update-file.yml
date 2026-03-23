@@ -3,7 +3,7 @@ name: Update external file
 on:
   workflow_dispatch:
   schedule:
-    - cron: "0 * * * *"  # каждый час
+    - cron: "0 * * * *"
 
 jobs:
   update-file:
@@ -35,13 +35,19 @@ jobs:
           git commit -m "Auto-update wlDPI_mobile.txt"
           git push
 
-      - name: Send Telegram notification
+      - name: Send Telegram (+/- stats)
         if: steps.diff.outputs.changed == 'true'
         run: |
           COMMIT_URL="https://github.com/${{ github.repository }}/commit/$(git rev-parse HEAD)"
 
-          curl -s -X POST https://api.telegram.org/bot${{ secrets.TELEGRAM_TOKEN }}/sendMessage \
-          -d chat_id=${{ secrets.TELEGRAM_CHAT_ID }} \
-          -d text="✅ wlDPI_mobile.txt обновлён
+          STATS=$(git diff HEAD~1 HEAD --numstat | awk '{added+=$1; deleted+=$2} END {print "+"added" / -"deleted}')
 
-🔗 Коммит: $COMMIT_URL"
+          MESSAGE="✅ wlDPI_mobile.txt обновлён
+
+📊 Изменения: $STATS
+
+🔗 $COMMIT_URL"
+
+          curl -s -X POST https://api.telegram.org/bot${{ secrets.TELEGRAM_TOKEN }}/sendMessage \
+            -d chat_id=${{ secrets.TELEGRAM_CHAT_ID }} \
+            --data-urlencode text="$MESSAGE"
