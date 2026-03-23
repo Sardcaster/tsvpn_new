@@ -3,7 +3,7 @@ name: Update external file
 on:
   workflow_dispatch:
   schedule:
-    - cron: "0 * * * *"
+    - cron: "0 * * * *"  # каждый час
 
 jobs:
   update-file:
@@ -12,6 +12,8 @@ jobs:
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 2  # важно для diff
 
       - name: Download latest file
         run: |
@@ -35,19 +37,31 @@ jobs:
           git commit -m "Auto-update wlDPI_mobile.txt"
           git push
 
+      - name: Calculate diff stats
+        if: steps.diff.outputs.changed == 'true'
+        id: stats
+        run: |
+          if git rev-parse HEAD~1 >/dev/null 2>&1; then
+            STATS=$(git diff HEAD~1 HEAD --numstat | awk '{added+=$1; deleted+=$2} END {print "+"added" / -"deleted}')
+          else
+            STATS="+0 / -0"
+          fi
+          echo "stats=$STATS" >> $GITHUB_OUTPUT
+
       - name: Send Telegram (+/- stats)
         if: steps.diff.outputs.changed == 'true'
         run: |
           COMMIT_URL="https://github.com/${{ github.repository }}/commit/$(git rev-parse HEAD)"
 
-          STATS=$(git diff HEAD~1 HEAD --numstat | awk '{added+=$1; deleted+=$2} END {print "+"added" / -"deleted}')
+          MESSAGE=$(cat <<EOF
+          ✅ wlDPI_mobile.txt обновлён
 
-          MESSAGE="✅ wlDPI_mobile.txt обновлён
+          📊 Изменения: ${{ steps.stats.outputs.stats }}
 
-📊 Изменения: $STATS
-
-🔗 $COMMIT_URL"
-
-          curl -s -X POST https://api.telegram.org/bot${{ secrets.TELEGRAM_TOKEN }}/sendMessage \
-            -d chat_id=${{ secrets.TELEGRAM_CHAT_ID }} \
-            --data-urlencode text="$MESSAGE"
+          🔗 $COMMIT_URL
+          EOF
+          )
+          
+              curl -s -X POST https://api.telegram.org/bot${{ secrets.TELEGRAM_TOKEN }}/sendMessage \
+                -d chat_id=${{ secrets.TELEGRAM_CHAT_ID }} \
+                --data-urlencode text="$MESSAGE"
