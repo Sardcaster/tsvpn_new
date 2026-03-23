@@ -1,0 +1,33 @@
+name: Update external file
+
+on:
+  schedule:
+    - cron: "0 * * * *"  # каждый час (можно поменять)
+  workflow_dispatch:     # запуск вручную
+
+jobs:
+  update-file:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Download latest file
+        run: |
+          curl -o wlDPI_mobile.txt https://raw.githubusercontent.com/igareck/vpn-configs-for-russia/refs/heads/main/WHITE-CIDR-RU-checked.txt
+
+      - name: Check for changes
+        run: |
+          if git diff --quiet; then
+            echo "No changes"
+            exit 0
+          fi
+
+      - name: Commit & push if changed
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add wlDPI_mobile.txt
+          git commit -m "Auto-update wlDPI_mobile.txt"
+          git push
