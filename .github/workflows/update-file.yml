@@ -20,7 +20,7 @@ jobs:
 
       - name: Download latest file
         run: |
-          curl -L -o wlDPI_mobile.txt https://raw.githubusercontent.com/igareck/vpn-configs-for-russia/main/WHITE-CIDR-RU-checked.txt
+          curl -L -o wlDPI_mobile.txt https://raw.githubusercontent.com/igareck/vpn-configs-for-russia/refs/heads/main/Vless-Reality-White-Lists-Rus-Mobile.txt
 
       - name: Check for changes
         id: diff
